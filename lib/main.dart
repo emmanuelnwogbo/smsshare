@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter_sms/flutter_sms.dart';
-import 'package:share/share.dart';
 
-class Alligator {
-  String name;
-  String description;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 
-  Alligator({@required this.name, @required this.description});
-}
+// The existing imports
+// !! Keep your existing impots here !!
 
+/// main is entry point of Flutter application
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) _setTargetPlatformForDesktop();
-  runApp(MyApp());
+  return runApp(MyApp());
 }
 
+/// If the current platform is desktop, override the default platform to
+/// a supported platform (iOS for macOS, Android for Linux and Windows).
+/// Otherwise, do nothing.
 void _setTargetPlatformForDesktop() {
   TargetPlatform targetPlatform;
   if (Platform.isMacOS) {
@@ -30,39 +31,22 @@ void _setTargetPlatformForDesktop() {
   }
 }
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+class MyApp extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: MyHomePage(),
-    );
-  }
+  _MyAppState createState() => _MyAppState();
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class _MyAppState extends State<MyApp> {
   TextEditingController _controllerPeople, _controllerMessage;
   String _message, body;
   String _canSendSMSMessage = "Check is not run.";
-  List<String> people = ['08033426880', '08157472838', '08121144100'];
+  List<String> people = [];
 
-  List<Alligator> alligators = [
-    Alligator(
-        name: "Crunchy", description: "A fierce Alligator with many teeth."),
-    Alligator(name: "Munchy", description: "Has a big belly, eats a lot."),
-    Alligator(
-        name: "Grunchy", description: "Scaly Alligator that looks menacing."),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    initPlatformState();
+  }
 
   Future<void> initPlatformState() async {
     _controllerPeople = TextEditingController();
@@ -72,7 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _sendSMS(List<String> recipents) async {
     try {
       String _result = await sendSMS(
-          message: 'hello there this is a test', recipients: recipents);
+          message: _controllerMessage.text, recipients: recipents);
       setState(() => _message = _result);
     } catch (error) {
       setState(() => _message = error.toString());
@@ -85,31 +69,149 @@ class _MyHomePageState extends State<MyHomePage> {
         _result ? 'This unit can send SMS' : 'This unit cannot send SMS');
   }
 
+  Widget _phoneTile(String name) {
+    return Padding(
+      padding: const EdgeInsets.all(3.0),
+      child: Container(
+          decoration: BoxDecoration(
+              border: Border(
+            bottom: BorderSide(color: Colors.grey[300]),
+            top: BorderSide(color: Colors.grey[300]),
+            left: BorderSide(color: Colors.grey[300]),
+            right: BorderSide(color: Colors.grey[300]),
+          )),
+          child: Padding(
+            padding: EdgeInsets.all(4.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => setState(() => people.remove(name)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(0.0),
+                  child: Text(
+                    name,
+                    textScaleFactor: 1.0,
+                    style: TextStyle(fontSize: 12.0),
+                  ),
+                )
+              ],
+            ),
+          )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-          child: Container(
-              child: Column(
-        children: <Widget>[
-          SizedBox(height: 200),
-          FlatButton(
-              onPressed: () {
-                _sendSMS(people);
-              },
-              child: Text('Send sms')),
-          SizedBox(height: 20),
-          FlatButton(
-              onPressed: () {
-                final RenderBox box = context.findRenderObject();
-                Share.share('hello there, this is a test',
-                    subject: 'alligator.description,',
-                    sharePositionOrigin:
-                        box.localToGlobal(Offset.zero) & box.size);
-              },
-              child: Text('Share')),
-        ],
-      ))), // This trailing comma makes auto-formatting nicer for build methods.
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('SMS/MMS Example'),
+        ),
+        body: ListView(
+          children: <Widget>[
+            people == null || people.isEmpty
+                ? Container(
+                    height: 0.0,
+                  )
+                : Container(
+                    height: 90.0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children:
+                            List<Widget>.generate(people.length, (int index) {
+                          return _phoneTile(people[index]);
+                        }),
+                      ),
+                    ),
+                  ),
+            ListTile(
+              leading: Icon(Icons.people),
+              title: TextField(
+                controller: _controllerPeople,
+                decoration: InputDecoration(labelText: "Add Phone Number"),
+                keyboardType: TextInputType.number,
+                onChanged: (String value) => setState(() {}),
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.add),
+                onPressed: _controllerPeople.text.isEmpty
+                    ? null
+                    : () => setState(() {
+                          people.add(_controllerPeople.text.toString());
+                          _controllerPeople.clear();
+                        }),
+              ),
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.message),
+              title: TextField(
+                decoration: InputDecoration(labelText: " Add Message"),
+                controller: _controllerMessage,
+                onChanged: (String value) => setState(() {}),
+              ),
+            ),
+            Divider(),
+            ListTile(
+              title: Text("Can send SMS"),
+              subtitle: Text(_canSendSMSMessage),
+              trailing: IconButton(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                icon: Icon(Icons.check),
+                onPressed: () {
+                  _canSendSMS();
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: RaisedButton(
+                color: Theme.of(context).accentColor,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text("SEND",
+                    style: Theme.of(context).accentTextTheme.button),
+                onPressed: () {
+                  _send();
+                },
+              ),
+            ),
+            Visibility(
+              visible: _message != null,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        _message ?? "No Data",
+                        maxLines: null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  void _send() {
+    if (people == null || people.isEmpty) {
+      setState(() => _message = "At Least 1 Person or Message Required");
+    } else {
+      _sendSMS(people);
+    }
   }
 }
